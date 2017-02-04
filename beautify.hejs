@@ -1,0 +1,417 @@
+#include "he_utils.js"
+#include "he_edit.hejs"
+
+function find(arr, obj) {
+    for(var i = 0; i < arr.length; i++) {
+        if (arr[i] == obj) return i;
+    }
+	return -1;
+}
+
+////////////////////////////////////////////////////////////////////////
+// Returns Syntax of current cursor position
+var brace_styles = ["collapse", "expand", "end-expand", "expand-strict"];
+var indent_styles = ["keep", "separate", "normal"];
+
+var global_options = {};
+
+Application.onWorkspaceOpen = function (bSaveState) {
+	global_options = {
+		js_brace_style:                  readStorage("js_brace_style", "collapse"),
+		js_preserve_newlines:            readStorage("js_preserve_newlines", true),
+		js_max_preserve_newlines:        readStorage("js_max_preserve_newlines", 5),
+		js_space_before_conditional:     readStorage("js_space_before_conditional", true),
+		js_unescape_strings:             readStorage("js_unescape_strings", false),
+		jslint_happy:                    readStorage("jslint_happy", false),
+		js_end_with_newline:      	 	 readStorage("js_end_with_newline", false),
+		js_space_after_anon_function:    readStorage("js_space_after_anon_function", false),
+		js_break_chained_methods:    	 readStorage("js_break_chained_methods", false),
+		js_comma_first:    	 			 readStorage("js_comma_first", false),
+		js_e4x:    	 			 		 readStorage("js_e4x", true),
+		js_keep_array_indentation:    	 readStorage("js_keep_array_indentation", true),
+		js_space_in_paren:    	 		 readStorage("js_space_in_paren", false),
+		js_space_in_empty_paren:    	 readStorage("js_space_in_empty_paren", false),
+		js_detect_packers:    	 		 readStorage("js_detect_packers", true),
+
+		html_brace_style:                readStorage("html_brace_style", "collapse"),
+		html_indent_scripts:             readStorage("html_indent_scripts", "normal"),
+		html_unformatted:                readStorage("html_unformatted", "a, sub, sup, b, i, u"),
+		html_indent_inner_html:          readStorage("html_indent_inner_html", false),
+		html_wrap_line_length:           readStorage("html_wrap_line_length", 250),
+		html_preserve_newlines:          readStorage("html_preserve_newlines", true),
+		html_max_preserve_newlines:      readStorage("html_max_preserve_newlines", 5),
+		html_indent_handlebars:      	 readStorage("html_indent_handlebars", false),
+		html_end_with_newline:      	 readStorage("html_end_with_newline", false),
+		html_extra_liners:      	 	 readStorage("html_extra_liners", "head, body, /html"),
+
+		css_selector_separator_newline:  readStorage("css_selector_separator_newline", true),
+        css_end_with_newline:      		 readStorage("css_end_with_newline", false),
+        css_newline_between_rules: 		 readStorage("css_newline_between_rules", true),
+	};
+}
+
+function onOptionsInit()
+{
+	// read "setting" from persistent storage
+	this.Parameters.js_brace_style                 = find(brace_styles, global_options.js_brace_style);
+	this.Parameters.js_preserve_newlines           = global_options.js_preserve_newlines;
+	this.Parameters.js_max_preserve_newlines       = global_options.js_max_preserve_newlines;
+	this.Parameters.js_space_before_conditional    = global_options.js_space_before_conditional;
+	this.Parameters.js_unescape_strings            = global_options.js_unescape_strings;
+	this.Parameters.jslint_happy                   = global_options.jslint_happy;
+	this.Parameters.js_end_with_newline            = global_options.js_end_with_newline;
+	this.Parameters.js_space_after_anon_function   = global_options.js_space_after_anon_function;
+	this.Parameters.js_break_chained_methods       = global_options.js_break_chained_methods;
+	this.Parameters.js_comma_first                 = global_options.js_comma_first;
+	this.Parameters.js_e4x                         = global_options.js_e4x;
+	this.Parameters.js_keep_array_indentation      = global_options.js_keep_array_indentation;
+	this.Parameters.js_space_in_paren              = global_options.js_space_in_paren;
+	this.Parameters.js_space_in_empty_paren        = global_options.js_space_in_empty_paren;
+	this.Parameters.js_detect_packers        	   = global_options.js_detect_packers;
+
+	this.Parameters.html_brace_style               = find(brace_styles, global_options.html_brace_style);
+	this.Parameters.html_indent_scripts            = find(indent_styles, global_options.html_indent_scripts);
+	this.Parameters.html_unformatted               = global_options.html_unformatted;
+	this.Parameters.html_indent_inner_html         = global_options.html_indent_inner_html;
+	this.Parameters.html_preserve_newlines         = global_options.html_preserve_newlines;
+	this.Parameters.html_max_preserve_newlines     = global_options.html_max_preserve_newlines;
+	this.Parameters.html_indent_handlebars         = global_options.html_indent_handlebars;
+	this.Parameters.html_end_with_newline          = global_options.html_end_with_newline;
+	this.Parameters.html_extra_liners              = global_options.html_extra_liners;
+
+	this.Parameters.css_selector_separator_newline = global_options.css_selector_separator_newline;
+	this.Parameters.css_end_with_newline           = global_options.css_end_with_newline;
+	this.Parameters.css_newline_between_rules      = global_options.css_newline_between_rules;
+
+	this.Layout =
+	'@<dialog> \
+		<tabcontrol selected="0" vstretch="true"> \
+			<tab title="JavaScript"> \
+				<group> \
+					<paragraph text="Brace Style:" minwidth="15" align="left"/> \
+					<combobox id="js_brace_style"> \
+						<item text="Collapse"/> \
+						<item text="Expand"/> \
+						<item text="End-Expand"/> \
+						<item text="Expand-Strict"/> \
+					</combobox> \
+				</group> \
+				<group> \
+					<checkbox title="Preserve new lines, but maximum" checked="true" id="js_preserve_newlines" align="left"/> \
+					<edit style="number" id="js_max_preserve_newlines" align="left"/> \
+					<paragraph text="lines" align="left"/> \
+				</group> \
+				<sectionbreak/> \
+				<checkbox title="Use comma-first list style" id="js_comma_first"/> \
+				<checkbox title="Space before conditional" checked="true" id="js_space_before_conditional"/> \
+				<checkbox title="End script &amp; style with newline" id="js_end_with_newline"/> \
+				<checkbox title="Space after anonym function" id="js_space_after_anon_function"/> \
+				<checkbox title="Break lines on chained methods" id="js_break_chained_methods"/> \
+				<checkbox title="Add spaces in parenthesis" id="js_space_in_paren"/> \
+				<checkbox title="Add spaces in empty parenthesis" id="js_space_in_empty_paren"/> \
+				<checkbox title="Keep array indentation" id="js_keep_array_indentation"/> \
+				<columnbreak/> \
+				<checkbox title="Support e4x/jsx" id="js_e4x"/> \
+				<checkbox title="JSLint stricter mode" id="js_space_before_conditional"/> \
+				<checkbox title="Unescape strings" id="js_unescape_strings"/> \
+				<checkbox title="Detect packers" id="js_detect_packers"/> \
+			</tab> \
+			<tab title="HTML"> \
+				<group> \
+					<paragraph text="Brace Style:" minwidth="20" align="left"/> \
+					<combobox selected_index="2" id="html_brace_style"> \
+						<item text="Collapse"/> \
+						<item text="Expand"/> \
+						<item text="End-Expand"/> \
+					</combobox> \
+				</group> \
+				<group> \
+					<paragraph text="Indent Scripts:" minwidth="20" align="left"/> \
+					<combobox id="html_indent_scripts"> \
+						<item text="Keep"/> \
+						<item text="Separate"/> \
+						<item text="Normal"/> \
+					</combobox> \
+				</group> \
+				<group> \
+					<paragraph text="Do not Format:" minwidth="20" align="left"/> \
+					<edit id="html_unformatted"/> \
+				</group> \
+				<group> \
+					<paragraph text="Add extra new line for:" minwidth="20" align="left"/> \
+					<edit id="html_extra_liners"/> \
+				</group> \
+				<checkbox title="Indent &lt;head&gt; and &lt;body&gt; sections" id="html_indent_inner_html"/> \
+				<checkbox title="Format and indent {{#foo}} and {{/foo}}" id="html_indent_handlebars"/> \
+				<checkbox title="End output with newline" id="html_end_with_newline"/> \
+				<group> \
+					<checkbox title="Preserve new lines, but maximum" checked="true" id="html_preserve_newlines" align="left"/> \
+					<edit style="number" id="html_max_preserve_newlines" align="left"/> \
+					<paragraph text="lines" align="left"/> \
+				</group> \
+			</tab> \
+			<tab title="CSS"> \
+				<checkbox title="Add a newline between multiple selectors" checked="true" id="css_selector_separator_newline"/> \
+				<checkbox title="End output with newline" checked="true" id="css_end_with_newline"/> \
+				<checkbox title="Add a newline between CSS rules" checked="true" id="css_newline_between_rules"/> \
+			</tab> \
+		</tabcontrol> \
+	</dialog>@';
+}
+
+function onOptionsApply()
+{
+	// store new "setting" value in persistent storage
+	var vStorage = GetStorage(eStorageTypeWorkspace, "", eAccessTypeWrite);
+
+	vStorage.js_brace_style               = global_options.js_brace_style 	  	  	    = brace_styles[this.Parameters.js_brace_style];
+	vStorage.js_preserve_newlines         = global_options.js_preserve_newlines 	  	= this.Parameters.js_preserve_newlines;
+	vStorage.js_max_preserve_newlines     = global_options.js_max_preserve_newlines 	= this.Parameters.js_max_preserve_newlines;
+	vStorage.js_space_before_conditional  = global_options.js_space_before_conditional  = this.Parameters.js_space_before_conditional;
+	vStorage.js_unescape_strings          = global_options.js_unescape_strings 		    = this.Parameters.js_unescape_strings;
+	vStorage.jslint_happy                 = global_options.jslint_happy 		  		= this.Parameters.jslint_happy;
+	vStorage.js_end_with_newline          = global_options.js_end_with_newline 		  	= this.Parameters.js_end_with_newline;
+	vStorage.js_space_after_anon_function = global_options.js_space_after_anon_function = this.Parameters.js_space_after_anon_function;
+	vStorage.js_break_chained_methods 	  = global_options.js_break_chained_methods 	= this.Parameters.js_break_chained_methods;
+	vStorage.js_comma_first               = global_options.js_comma_first 		  		= this.Parameters.js_comma_first;
+	vStorage.js_e4x                       = global_options.js_e4x 		  		    	= this.Parameters.js_e4x;
+	vStorage.js_keep_array_indentation    = global_options.js_keep_array_indentation 	= this.Parameters.js_keep_array_indentation;
+	vStorage.js_space_in_paren            = global_options.js_space_in_paren 		  	= this.Parameters.js_space_in_paren;
+	vStorage.js_space_in_empty_paren      = global_options.js_space_in_empty_paren 		= this.Parameters.js_space_in_empty_paren;
+	vStorage.js_detect_packers      	  = global_options.js_detect_packers 			= this.Parameters.js_detect_packers;
+
+	vStorage.html_brace_style               = global_options.html_brace_style 			    = brace_styles[this.Parameters.html_brace_style];
+	vStorage.html_indent_scripts            = global_options.html_indent_scripts 		    = indent_styles[this.Parameters.html_indent_scripts];
+	vStorage.html_unformatted               = global_options.html_unformatted 			    = this.Parameters.html_unformatted;
+	vStorage.html_indent_inner_html         = global_options.html_indent_inner_html 		= this.Parameters.html_indent_inner_html;
+	vStorage.html_preserve_newlines         = global_options.html_preserve_newlines 		= this.Parameters.html_preserve_newlines;
+	vStorage.html_max_preserve_newlines     = global_options.html_max_preserve_newlines 	= this.Parameters.html_max_preserve_newlines;
+	vStorage.html_indent_handlebars         = global_options.html_indent_handlebars 		= this.Parameters.html_indent_handlebars;
+	vStorage.html_end_with_newline          = global_options.html_end_with_newline 			= this.Parameters.html_end_with_newline;
+	vStorage.html_extra_liners              = global_options.html_extra_liners 			    = this.Parameters.html_extra_liners;
+
+	vStorage.css_selector_separator_newline = global_options.css_selector_separator_newline = this.Parameters.css_selector_separator_newline;
+	vStorage.css_end_with_newline           = global_options.css_end_with_newline 			= this.Parameters.css_end_with_newline;
+	vStorage.css_newline_between_rules      = global_options.css_newline_between_rules 		= this.Parameters.css_newline_between_rules;
+}
+
+function onOptionsContextHelp(varID)
+{
+	switch (varID)
+	{
+		case "js_brace_style" : return "Put braces on the same line as control statements (default),\nor put braces on own line (Allman / ANSI style), or just put end braces on own line.";
+		case "js_preserve_newlines" : return "Controls whether existing line breaks should be preserved";
+		case "js_max_preserve_newlines" : return "Maximum number of line breaks to be preserved in one chunk";
+		case "js_space_before_conditional" : return "Should the space before conditional statement be added,\n\"if(true)\" vs \"if (true)\"";
+		case "js_unescape_strings" : return "Should printable characters in strings encoded in \n\\xNN notation be unescaped, \"example\" vs \"\\x65\\x78\\x61\\x6d\\x70\\x6c\\x65\"";
+		case "jslint_happy" : return "If enabled, then jslint-stricter mode is enforced";
+		case "js_space_after_anon_function" : return "Should the space before an anonymous function's parens be added, 'function()' vs 'function ()',\nNOTE: This option is overriden by jslint_happy (i.e. if jslint_happy is true, space_after_anon_function is true by design)";
+		case "js_comma_first" : return "Put commas at the beginning of new line instead of end";
+		case "js_e4x" : return "Pass E4X xml literals through untouched";
+		case "js_keep_array_indentation" : return "Preserve array indentation";
+		case "js_break_chained_methods" : return "Break chained method calls across subsequent lines";
+		case "js_space_in_paren" : return "Add padding spaces within paren, ie. f( a, b )";
+		case "js_space_in_empty_paren" : return "Add padding spaces within empty paren, ie. f( )";
+		case "js_detect_packers" : return "Detect packers and obfuscators";
+
+		case "html_brace_style" : return "Put braces on the same line as control statements (default),\n or put braces on own line (Allman / ANSI style), or just put end braces on own line.";
+		case "html_unformatted" : return "List of tags, that shouldn't be reformatted";
+		case "html_extra_liners" : return "List of tags that should have an extra newline before them";
+		case "html_preserve_newlines" : return "Whether existing line breaks before elements should be preserved\nOnly works before elements, not inside tags or for text.";
+		case "html_max_preserve_newlines_txt":		
+		case "html_max_preserve_newlines" : return "Maximum number of line breaks to be preserved in one chunk.";
+	}
+	return "No help for '" + varID + "' available.";
+}
+
+function unpacker_filter(source) {
+    var trailing_comments = '';
+    var comment = '';
+    var found = false;
+
+	__include("core/unpackers/*.js");
+
+    do {
+        found = false;
+        if (/^\s*\/\*/.test(source)) {
+            found = true;
+            comment = source.substr(0, source.indexOf('*/') + 2);
+            source = source.substr(comment.length).replace(/^\s+/, '');
+            trailing_comments += comment + "\n";
+        } else if (/^\s*\/\//.test(source)) {
+            found = true;
+            comment = source.match(/^\s*\/\/.*/)[0];
+            source = source.substr(comment.length).replace(/^\s+/, '');
+            trailing_comments += comment + "\n";
+        }
+    } while (found);
+
+    if (P_A_C_K_E_R.detect(source)) {
+        // P.A.C.K.E.R unpacking may fail, even though it is detected
+        var unpacked = P_A_C_K_E_R.unpack(source);
+        if (unpacked != source) {
+            source = unpacker_filter(unpacked);
+        }
+    }
+    if (Urlencoded.detect(source)) {
+        source = unpacker_filter(Urlencoded.unpack(source))
+    }
+    if (JavascriptObfuscator.detect(source)) {
+        source = unpacker_filter(JavascriptObfuscator.unpack(source))
+    }
+    if (MyObfuscate.detect(source)) {
+        source = unpacker_filter(MyObfuscate.unpack(source))
+    }
+
+    return trailing_comments + source;
+}
+
+Application.onTextFormat = function(sel, bIndent)
+{
+	var syntax = this.GetStyleFromPos(sel.Start).Style.Syntax;
+
+	if ( syntax.IsInheritedFrom("css") || syntax.IsInheritedFrom("html") || syntax.IsInheritedFrom("html5") ||
+		syntax.IsInheritedFrom("js") || syntax.IsInheritedFrom("json"))
+	{
+		var wholeDocFormat = sel.IsEmpty;
+		if (sel.IsEmpty) sel = new Range(0, 0, ActiveDocument.LineCount - 1, ActiveDocument.GetLineLength(ActiveDocument.LineCount - 1));
+		var text = this.GetText(sel);
+		if ( text != "" )
+		{
+			var TabMode  = syntax.TabMode;
+			var bUseTabs = (TabMode != eTabModeTabsToSpaces);
+			if ( bUseTabs && TabMode == eTabModeAuto )
+			bUseTabs = ActiveDocument.TabUsed;
+
+			var lb = this.LineBreak;
+
+			var options = {
+				'indent_size' : bUseTabs?1:this.IndentSize,
+				'indent_char' : bUseTabs?'\t':' '
+			};
+
+			if ( syntax.IsInheritedFrom("js") || syntax.IsInheritedFrom("json") )
+			{
+				// now add JS specific options
+				options.preserve_newlines         = global_options.js_preserve_newlines;
+				options.max_preserve_newlines     = global_options.js_max_preserve_newlines;
+				options.brace_style               = global_options.js_brace_style;
+				options.space_before_conditional  = global_options.js_space_before_conditional;
+				options.unescape_strings          = global_options.js_unescape_strings;
+				options.jslint_happy              = global_options.jslint_happy;
+				options.end_with_newline          = global_options.js_end_with_newline;
+				options.space_after_anon_function = global_options.js_space_after_anon_function;
+				options.break_chained_methods     = global_options.break_chained_methods;
+				options.comma_first               = global_options.js_comma_first;
+				options.e4x                       = global_options.js_e4x;
+				options.keep_array_indentation    = global_options.js_keep_array_indentation;
+				options.space_in_paren            = global_options.js_space_in_paren;
+				options.space_in_empty_paren      = global_options.js_space_in_empty_paren;
+
+				__include("core/beautify.js");
+
+				if ( global_options.js_detect_packers )
+					text = unpacker_filter(text);
+
+				text = js_beautify(text, options);
+			}
+			else if ( syntax.IsInheritedFrom("css") )
+			{
+				options.selector_separator    = global_options.css_selector_separator_newline;
+				options.end_with_newline      = global_options.css_end_with_newline;
+				options.newline_between_rules = global_options.css_newline_between_rules;
+
+				__include("core/beautify-css.js");
+				text = css_beautify(text, options);
+			}
+			else if ( syntax.IsInheritedFrom("html") || syntax.IsInheritedFrom("html5"))
+			{
+				// now add HTML specific options
+				options.wrap_line_length      = syntax.PageWidth;
+				options.max_char      		  = syntax.PageWidth;
+				options.brace_style           = global_options.html_brace_style;
+				options.unformatted           = global_options.html_unformatted.split(',');
+				options.indent_scripts        = global_options.indent_scripts;
+				options.indent_inner_html     = global_options.html_indent_inner_html;
+				options.preserve_newlines     = global_options.html_preserve_newlines;
+				options.max_preserve_newlines = global_options.html_max_preserve_newlines;
+				options.indent_handlebars     = global_options.html_indent_handlebars;
+				options.end_with_newline      = global_options.html_end_with_newline;
+				options.extra_liners          = global_options.html_extra_liners.split(',');
+
+				__include("core/beautify.js");
+				__include("core/beautify-css.js");
+				__include("core/beautify-html.js");
+				text = html_beautify(text, options);
+			}
+
+			// adopt line break style to document default
+			if ('\n' != lb) text = text.replace(/([^\r]|^)\n/mg, "$1" + lb);
+
+			var endPos = this.ReplaceText(sel, text, AddUndoActionType("Beautify"));
+			endPos = this.AdoptIndent(new Range(sel.Start, endPos)).End;
+
+			// try to keep cursor position stable
+			if (endPos.Line != sel.End.Line || endPos.Pos != sel.End.Pos)
+				this.ActiveView.Position = endPos;
+		}
+		return true;
+	}
+
+	return false;
+}
+
+var vUnpack = new Command("JSBeautifier.Unpack", "Unpack JavaScript", "Unpacks/Deobfuscates JavaScript Code");
+vUnpack.onExecute = function() {
+	var sel = ActiveView.Selection;
+
+	// if there is no selection, take current word range as selection
+	if ( sel.IsEmpty )
+		sel = new Range(0, 0, ActiveDocument.LineCount - 1, ActiveDocument.GetLineLength(ActiveDocument.LineCount - 1));
+
+	var text = ActiveDocument.GetText(sel);
+	if ( text != "" )
+	{
+		__include("core/unpackers/*.js");
+
+		var unpacked = "";
+		if (JavascriptObfuscator.detect(text)) {
+		    unpacked = JavascriptObfuscator.unpack(text);
+		}
+		else if (MyObfuscate.detect(text)) {
+		    unpacked = MyObfuscate.unpack(text);
+		}
+		else if (P_A_C_K_E_R.detect(text)) {
+		    unpacked = P_A_C_K_E_R.unpack(text);
+		}
+		else if (Urlencoded.detect(text)) {
+		    unpacked = Urlencoded.unpack(text);
+		}
+
+		if ( unpacked != "" )
+			ActiveView.Position = ActiveDocument.ReplaceText(sel, unpacked, AddUndoActionType("Unpack JavaScript"));
+	}
+}
+
+vUnpack.onEnabled = function() {
+	return ActiveDocument != null && ActiveDocument.ReadOnly != true && CurrentSyntax().IsInheritedFrom("js");
+}
+
+// register Unpack command
+Application.RegisterCommand(vUnpack);
+
+// and placed it into main menu -> Format, after DeleteDuplicates
+Application.onInitMainMenu = function (bUpdate){
+	if ( bUpdate == false )
+	{
+		var menu_location = this.GetMenuItemPos("Edit.DeleteDuplicates");
+		if ( menu_location.Menu != null && menu_location.Position != -1)
+		{
+			menu_location.Menu.InsertItem(menu_location.Position + 1, "", vUnpack);
+			menu_location.Menu.InsertItem(menu_location.Position + 1);
+		}
+	}
+}
+
+Application.RegisterOptionsPage("JS Beautifier", onOptionsInit, onOptionsApply, onOptionsContextHelp);
+Application.AddScriptInfo("5EF53793-74E5-439D-B200-5500076E6FDA", "JS Beautifier", "0.1.1.1", "JavaScript, HTML, CSS Beautifier", "jsbeautifier.org", "supportbox@hippoedit.com", "http://wiki.hippoedit.com/plugins/js-beautifier");
